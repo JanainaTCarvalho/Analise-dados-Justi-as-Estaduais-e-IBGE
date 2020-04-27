@@ -12,7 +12,6 @@ Comparativa do tempo médio do processo nas justiças estaduais com dados popula
 import pandas as pd
 import altair as alt
 import streamlit as st
-import json
 
 
 def criar_barras(coluna_cat, coluna_num, df):
