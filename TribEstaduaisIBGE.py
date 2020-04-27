@@ -12,6 +12,7 @@ Comparativa do tempo médio do processo nas justiças estaduais com dados popula
 import pandas as pd
 import altair as alt
 import streamlit as st
+import json
 
 
 def criar_barras(coluna_cat, coluna_num, df):
@@ -53,99 +54,129 @@ def cria_correlationplot(df, colunas_numericas):
 
     return cor_plot + text
 
-def main():
-    st.title('Análise exploratória de dados - AceleraDev Data Science')
-    st.header('Comparativa de dados nas justiças estaduais com dados populacionais fornecidos pelo IBGE.')
-    st.image('BrasilMartelo.jpg')
-    
+@st.cache
+def load():
+
     #Importação dos dados
     ibge = pd.read_csv('Estados_IBGE.csv', sep = ';')
     custo = pd.read_csv('Estadual_custo.csv', sep = ';')
     execucao = pd.read_csv('Estadual_Execucao.csv', sep = ';')
     porte = pd.read_csv('Estadual_porte.csv', sep = ';')
     sentenca = pd.read_csv('Estadual_Sentenca.csv', sep = ';')
-    perc_pop = pd.read_csv('Estadual_PercentualPopResidenteMunicipioSede.csv', sep = ';')
-    
-     #Transformação das tabelas em um único dataframe
+    perc_pop = pd.read_csv('Estadual_PercentualPopResidenteMunicipioSede.csv', sep = ';')   
+
+    #Transformação das tabelas em um único dataframe
     df = pd.merge(ibge, custo, on  = 'Estados')
     df = pd.merge(df, sentenca, on  = 'Estados')
     df = pd.merge(df, execucao, on  = 'Estados')
     df = pd.merge(df, porte, on  = 'Estados')
-    df = pd.merge(df, perc_pop, on  = 'Estados')
+    df = pd.merge(df, perc_pop, on  = 'Estados') 
+
+    return ibge, custo, execucao, porte, sentenca, perc_pop, df
+
+
+def main():
+    st.title('Análise exploratória de dados - AceleraDev Data Science')
+    st.header('Comparativa de dados nas justiças estaduais com dados populacionais fornecidos pelo IBGE.')
+    st.image('BrasilMartelo.jpg')
+    
+    ibge, custo, execucao, porte, sentenca, perc_pop, df = load()
     
     #Visualização das tabelas importadas
     st.sidebar.title('Justiça Estaduais e dados do IBGE por estado')
     st.sidebar.subheader('Conheça os dados utilizados na análise')
-    tabelas_individuais = st.sidebar.selectbox('Selecione a tabela', ('Dados Gerais', 'Dados IBGE', 'Custo da Justiça por habitante', 'Tempo médio conhecimento e execução', 
-                                                'Tempo médio sentença', 'Percentual população em sede de comarca', 'Outros dados', 'Tabela completa')
-                                               )
+    tabelas_individuais = st.sidebar.selectbox('Selecione a tabela', ('Dados Gerais', 'Dados IBGE', 'Custo da Justiça por habitante', 'Tempo médio conhecimento e execução', 'Tempo médio sentença', 'Percentual população em sede de comarca', 'Outros dados', 'Tabela completa'))
+
     if tabelas_individuais:
         if tabelas_individuais == 'Dados Gerais':
-            st.write('Um dos problemas mais comentados quando se trata de justiça no Brasil é o longo tempo de tramitação do processo. Nesse breve trabalho de exploração de dados procuro relacionar os dados das Justiças Estaduais, incluindo tempo médio dos processos, com dados populacionais do mesmo estado, procurando entender se o tempo médio do processo pode estar relacionado com o desenvolvimento do estado, quantidade de habitantes, densidade populacional, investimento financeiro na justiça e outros dados.')
-            st.write('-> Esse trabalho foi desenvolvido para o desafio de Análise exploratória de dados proposto na Aceleração em Data Science da Codenation pelo professor Túlio Vieira de Souza.')
-            st.write('*Os dados relativos às Justiças Estaduais foram retirados do site do CNJ (Conselho Nacional de Justiça) no relatório dos números da Justiça de 2019, ano base 2018.')
-            st.write('*Os dados relativos aos estados foram retirados do site do IBGE em abril de 2020, baseados em estimativas populacionais de 2019 e no senso de 2010.') 
+            st.write('''
+            Um dos problemas mais comentados quando se trata de justiça no Brasil é o longo tempo de tramitação do processo. Nesse breve trabalho de exploração de dados procuro relacionar os dados das Justiças Estaduais, incluindo tempo médio dos processos, com dados populacionais do mesmo estado, procurando entender se o tempo médio do processo pode estar relacionado com o desenvolvimento do estado, quantidade de habitantes, densidade populacional, investimento financeiro na justiça e outros dados.\n
+            -> Esse trabalho foi desenvolvido para o desafio de Análise exploratória de dados proposto na Aceleração em Data Science da Codenation pelo professor Túlio Vieira de Souza.\n
+            *Os dados relativos às Justiças Estaduais foram retirados do site do CNJ (Conselho Nacional de Justiça) no relatório dos números da Justiça de 2019, ano base 2018.\n
+            *Os dados relativos aos estados foram retirados do site do IBGE em abril de 2020, baseados em estimativas populacionais de 2019 e no senso de 2010.
+            ''') 
+            
         if tabelas_individuais == 'Dados IBGE':
             st.subheader('Dados dos estados fornecido pelo IBGE')
             st.dataframe(ibge)
             st.markdown('Informativo dos dados mostrados:')
-            st.write('-> População estimada em 2019.')
-            st.write('-> Densidade demográfica pelo senso IBGE 2010, hab/km².')
-            st.write('-> IDH - Índice de Desenvolvimento Humano pelo senso IBGE 2010.')
-            st.write('-> Receitas realizadas em Reais (X1000) em 2017.')
-            st.write('-> Renda mensal domiciliar per capita em 2019, em Reais')
-            st.write('*Dados retirados do site do IBGE em abril de 2020.')
+            st.write('''
+            -> População estimada em 2019.\n
+            -> Densidade demográfica pelo senso IBGE 2010, hab/km².\n
+            -> IDH - Índice de Desenvolvimento Humano pelo senso IBGE 2010.\n
+            -> Receitas realizadas em Reais (X1000) em 2017.\n
+            -> Renda mensal domiciliar per capita em 2019, em Reais\n
+            *Dados retirados do site do IBGE em abril de 2020.
+            ''')
+
         if tabelas_individuais == 'Custo da Justiça por habitante':
             st.subheader('Custo da Justiça por habitante em Reais')
             st.dataframe(custo)
-            st.write('-> Valor gasto por habitante pela Justiça Estadual, em Reais.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
+            st.write('''
+            -> Valor gasto por habitante pela Justiça Estadual, em Reais.\n
+            '*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.
+            ''')
+
         if tabelas_individuais == 'Tempo médio conhecimento e execução':
             st.subheader('Tempo médio do processo dividido entre fase de execução e de conhecimento em meses')
             st.dataframe(execucao)
-            st.write('-> Tempo médio gasto nos processos da Justiça Estadual, divididos entre fase de conhecimento e fase de execução do processo, em meses.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
+            st.write('''
+            -> Tempo médio gasto nos processos da Justiça Estadual, divididos entre fase de conhecimento e fase de execução do processo, em meses.\n
+            *Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.
+            ''')
+
         if tabelas_individuais == 'Tempo médio sentença':
             st.subheader('Tempo médio do processo até a data da sentença em 1° e 2° grau de jurisdição, em meses')
             st.dataframe(sentenca)
-            st.write('-> Tempo médio gasto nos processos da Justiça Estadual até a data da sentença, divididos entre 1° e 2° graus de jurisdição, em meses.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
+            st.write('''
+            -> Tempo médio gasto nos processos da Justiça Estadual até a data da sentença, divididos entre 1° e 2° graus de jurisdição, em meses.\n
+            *Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.
+            ''')
+
         if tabelas_individuais == 'Percentual população em sede de comarca':
             st.subheader('Percentual da população residente em cidade com sede de comarca')
             st.dataframe(perc_pop)
-            st.write('-> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
+            st.write('''
+            -> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.\n
+            *Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.
+            ''')
+
         if tabelas_individuais == 'Outros dados':
             st.subheader('Outros dados da Justiça Estadual')
             st.dataframe(porte)
-            st.write('-> Despesa total da justiça estadual, em Reais.')
-            st.write('-> Quantidade de casos novos que entraram no ano de 2018.')
-            st.write('-> Quantidade de casos ainda pendentes (não baixados) no ano de 2018.')
-            st.write('-> Quantidade de magistrados (juízes) ativos.')
-            st.write('-> Quantidade de servidores e auxiliares ativos.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
+            st.write('''
+            -> Despesa total da justiça estadual, em Reais.\n
+            -> Quantidade de casos novos que entraram no ano de 2018.\n
+            -> Quantidade de casos ainda pendentes (não baixados) no ano de 2018.\n
+            -> Quantidade de magistrados (juízes) ativos.\n
+            -> Quantidade de servidores e auxiliares ativos.\n
+            *Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.
+            ''')
+
         if tabelas_individuais == 'Tabela completa':
             st.subheader('Tabela completa de dados analisados')
             st.dataframe(df)
             st.markdown('Informativo dos dados mostrados:')
-            st.write('-> População estimada em 2019.')
-            st.write('-> Densidade demográfica pelo senso IBGE 2010, hab/km².')
-            st.write('-> IDH - Índice de Desenvolvimento Humano pelo senso IBGE 2010.')
-            st.write('-> Receitas realizadas em Reais (X1000) em 2017.')
-            st.write('-> Renda mensal domiciliar per capita em 2019, em Reais')
-            st.write('-> Valor gasto por habitante pela Justiça Estadual, em Reais.')
-            st.write('-> Tempo médio gasto nos processos da Justiça Estadual, divididos entre fase de conhecimento e fase de execução do processo, em meses.')
-            st.write('-> Tempo médio gasto nos processos da Justiça Estadual até a data da sentença, divididos entre 1° e 2° graus de jurisdição, em meses.')
-            st.write('-> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.')
-            st.write('-> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.')
-            st.write('-> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.')
-            st.write('-> Despesa total da justiça estadual, em Reais.')
-            st.write('-> Quantidade de casos novos que entraram no ano de 2018.')
-            st.write('-> Quantidade de casos ainda pendentes (não baixados) no ano de 2018.')
-            st.write('-> Quantidade de magistrados (juízes) ativos.')
-            st.write('-> Quantidade de servidores e auxiliares ativos.')
-            st.write('*Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.')
-            st.write('*Dados retirados do site do IBGE em abril de 2020.')
+            st.write('''
+            -> População estimada em 2019.\n
+            -> Densidade demográfica pelo senso IBGE 2010, hab/km².\n
+            -> IDH - Índice de Desenvolvimento Humano pelo senso IBGE 2010.\n
+            -> Receitas realizadas em Reais (X1000) em 2017.\n
+            -> Renda mensal domiciliar per capita em 2019, em Reais\n
+            -> Valor gasto por habitante pela Justiça Estadual, em Reais.\n
+            -> Tempo médio gasto nos processos da Justiça Estadual, divididos entre fase de conhecimento e fase de execução do processo, em meses.\n
+            -> Tempo médio gasto nos processos da Justiça Estadual até a data da sentença, divididos entre 1° e 2° graus de jurisdição, em meses.\n
+            -> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.\n
+            -> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.\n
+            -> Percentual da população residente em cidade sede de comarca se refere à facilidade de acesso à justiça da população do estado.\n
+            -> Despesa total da justiça estadual, em Reais.\n
+            -> Quantidade de casos novos que entraram no ano de 2018.\n
+            -> Quantidade de casos ainda pendentes (não baixados) no ano de 2018.\n
+            -> Quantidade de magistrados (juízes) ativos.\n
+            -> Quantidade de servidores e auxiliares ativos.\n
+            *Dados retirados do site do CNJ em abril de 2020. Análise de 2019, ano-base 2018.\n
+            *Dados retirados do site do IBGE em abril de 2020.'''
+            )
     
     
     #Criação de listas de acordo com o tipo da coluna
@@ -160,9 +191,12 @@ def main():
     if corrl:
         st.subheader('Correlação dos dados:')
         st.write(cria_correlationplot(df, colunas_numericas))
-        st.write('Em uma primeira análise, diante do gráfico de correlação linear acima, nota-se que não há uma forte correlação entre o tempo médio processual e os demais indicadores considerados.')
-        st.write('Entretanto, nota-se uma correlação moderada entre o tempo levado em um processo na fase de conhecimento e valor gasto por habitante em cada justiça (Custo por habitante e Custo por habitante sem os inativos). Também encontramos uma correlação levemente moderada entre o tempo médio levado no processo em fase de conhecimento e o IDH e o Rendimento mensal domiciliar per capita.  Todas essas correlações moderadas apontadas são negativas, que significa que quanto maior o tempo gasto no processo, menor são os demais indicadores (Investimento na justiça, IDH e Rendimento mensal domiciliar per capita do estado).')
-        st.write('Importante ressaltar que, a despeito de ter-se encontrado uma correlação moderada em dados relevantes, essas análises guardam limitações metodológicas. A principal delas está no uso da média como medida estatística para representar o tempo. A média é fortemente influenciada por valores extremos e, ao resumir em um único indicador os resultados de informações extremamente heterogêneas, pode apresentar distorções. Para uma análise de tempo mais adequada, seria importante recorrer aos quantis, boxplots e curvas de sobrevivência, considerando, por exemplo, o agrupamento de processos semelhantes, segundo classe e assunto, de forma a diminuir a heterogeneidade e a dispersão. Para essas análises, seria imprescindível recorrer aos dados de cada processo e não de forma agregada.')
+        st.write('''
+        Em uma primeira análise, diante do gráfico de correlação linear acima, nota-se que não há uma forte correlação entre o tempo médio processual e os demais indicadores considerados.\n
+        Entretanto, nota-se uma correlação moderada entre o tempo levado em um processo na fase de conhecimento e valor gasto por habitante em cada justiça (Custo por habitante e Custo por habitante sem os inativos). Também encontramos uma correlação levemente moderada entre o tempo médio levado no processo em fase de conhecimento e o IDH e o Rendimento mensal domiciliar per capita.  Todas essas correlações moderadas apontadas são negativas, que significa que quanto maior o tempo gasto no processo, menor são os demais indicadores (Investimento na justiça, IDH e Rendimento mensal domiciliar per capita do estado).\n
+        Importante ressaltar que, a despeito de ter-se encontrado uma correlação moderada em dados relevantes, essas análises guardam limitações metodológicas. A principal delas está no uso da média como medida estatística para representar o tempo. A média é fortemente influenciada por valores extremos e, ao resumir em um único indicador os resultados de informações extremamente heterogêneas, pode apresentar distorções. Para uma análise de tempo mais adequada, seria importante recorrer aos quantis, boxplots e curvas de sobrevivência, considerando, por exemplo, o agrupamento de processos semelhantes, segundo classe e assunto, de forma a diminuir a heterogeneidade e a dispersão. Para essas análises, seria imprescindível recorrer aos dados de cada processo e não de forma agregada.
+        ''')
+        
     #Outras análises
     st.sidebar.subheader('Outras visualizações de dados')
     st.sidebar.markdown('Selecione a visualizacao')
